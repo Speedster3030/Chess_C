@@ -1,1 +1,1 @@
-A second attenpt at a chess engine
+A second attempt at a chess engine
