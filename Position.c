@@ -8,7 +8,7 @@
 int inCheck(Position* p)
 {
     uint64_t king=p->turn?p->whiteKing:p->blackKing;
-    return king & p->attackMap;
+    return (king & p->attackMap)>0?1:0;
 }
 
 void getMoves(Position* p,moveList* moves)
