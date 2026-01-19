@@ -23,6 +23,10 @@
 
 #define EMPTY 0
 #define EDGE 11
+#define PROMO 12
+#define ENPASS 13
+#define KINGSIDECASTLE 14
+#define QUEENSIDECASTLE 15
 
 #define MAXGAMEMOVES 150
 #define MAXKNIGHTMOVES 8
@@ -33,8 +37,23 @@
 #define MOVE -11
 #define MAXMOVES 137
 
-#define BIT_SQ(n) n-17-(2*(n/10))
-#define BOARD_SQ(n) n+21+(2*(n/8))
+#define BIT_SQ(n) (n)-17-(2*((n)/10))
+#define BOARD_SQ(n) (n)+21+(2*((n)/8))
+
+#define WHITECANCASTLEKINGSIDE (p->flags & 0b0001)
+#define WHITECANCASTLEQUEENSIDE (p->flags & 0b010)
+#define BLACKCANCASTLEKINGSIDE (p->flags & 0b0100)
+#define BLACKCANCASTLEQUEENSIDE (p->flags & 0b1000)
+
+#define WKPIECES ((p->whitePieces | p->blackPieces) & 0x6ULL)
+#define WQPIECES ((p->whitePieces | p->blackPieces) & 0x70ULL)
+#define BKPIECES ((p->whitePieces | p->blackPieces) & (0x6ULL << 56))
+#define BQPIECES ((p->whitePieces | p->blackPieces) & (0x70ULL << 56))
+
+#define WHITEKINGCASTLEOK (WKPIECES | (p->attackMap & 0xeULL))
+#define WHITEQUEENCASTLEOK (WQPIECES | (p->attackMap & 0x38ULL))
+#define BLACKKINGCASTLEOK (BKPIECES | (p->attackMap & (0xeULL << 56)))
+#define BLACKQUEENCASTLEOK (BQPIECES | (p->attackMap & (0x38ULL << 56)))
 
 #define RESET "\033[0m"
 #define WHITE "\033[33m"
@@ -63,6 +82,8 @@ typedef struct
     uint64_t blackPawns;
     uint64_t whiteKing;
     uint64_t blackKing;
+    uint8_t flags;
+    int8_t board[SQUARES];
 }gameState;
 
 typedef struct
@@ -71,13 +92,7 @@ typedef struct
     Move movesMade[MAXGAMEMOVES];
     uint8_t moveCount;
     uint8_t turn;
-    uint8_t flags;/*first bit from the right is for the white king side castle,
-    second bit is for the white queen side castle, third for the black king side
-    castle, and fourth for the black queen side castle. Or maybe we could do it 
-    individually ? Like if the white king has moved or not in one bit, the black
-    king in another bit, all of the rooks in another bit .. this way it seems 
-    we will have to do a lot less if else checks. And attacked squares or 
-    occupied squares can be checked by the bitboards... */
+    uint8_t flags;
     uint64_t whitePieces;
     uint64_t blackPieces;
     uint64_t whitePawns;
@@ -87,13 +102,6 @@ typedef struct
     uint64_t blackKing;
     gameState state[MAXGAMEMOVES];
 }Position;
-
-/*typedef struct
-{
-    Move *moves;
-    uint8_t size;
-}array_Container;*/
-
 
 int inCheck(Position* p);
 uint64_t bitMoves(Position* p,int s,int d,int c,uint64_t m);
@@ -111,9 +119,10 @@ void dummyMoves(Position *p,int s,moveList* moves);
 void pawnMoves(Position* p,int s,moveList* moves);
 uint64_t pawnAttacks(Position* p,int c);
 void kingMoves(Position *p,int s,moveList* moves);
-void display(Position *p);
+void display(int8_t *p);
 Position* new_Position();
-void generateAttackMap(Position* p);
+Position* readFen(char* s);
+uint64_t generateAttackMap(Position* p);
 void displayBits(uint64_t b);
 
 
