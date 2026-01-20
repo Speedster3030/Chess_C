@@ -1,3 +1,3 @@
 Aug 2025: A second attempt at a chess engine
-5 Jan 2026: Have to incorporate efficient move generation,
-            particularly pinned pieces
+\n 20 Jan 2026: Finished move generation, passes 
+                basic perft tests
