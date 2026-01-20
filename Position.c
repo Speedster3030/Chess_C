@@ -202,21 +202,21 @@ void makeMove(Position *p,Move *m)
     p->board[m->toSq]=p->board[m->fromSq];
     p->board[m->fromSq]=EMPTY;
     label:
-    if((p->flags & 0b1) && (m->toSq==98 || m->fromSq==98 || m->piece==WHITEKING))
+    if((p->flags & 0b0001) && (m->toSq==98 || m->fromSq==98 || m->piece==WHITEKING))
     {
-        p->flags &= 0x00001110;
+        p->flags &= 0b1110;
     }
-    if((p->flags & 0b10) && (m->toSq==91 || m->fromSq==91 || m->piece==WHITEKING))
+    if((p->flags & 0b0010) && (m->toSq==91 || m->fromSq==91 || m->piece==WHITEKING))
     {
-        p->flags &= 0x00001101;
+        p->flags &= 0b1101;
     }
-    if((p->flags & 0b100) && (m->toSq==28 || m->fromSq==28 || m->piece==BLACKKING))
+    if((p->flags & 0b0100) && (m->toSq==28 || m->fromSq==28 || m->piece==BLACKKING))
     {
-        p->flags &= 0x00001011;
+        p->flags &= 0b1011;
     }
     if((p->flags & 0b1000) && (m->toSq==21 || m->fromSq==21 || m->piece==BLACKKING))
     {
-        p->flags &= 0x00000111;
+        p->flags &= 0b0111;
     }
 
     p->movesMade[p->moveCount]=*m;
@@ -482,7 +482,7 @@ void pawnMoves(Position* p,int sq,moveList* moves)
             }
         }
         return;
-    }//have to handle cases carefully and xorrectly
+    }//have to handle cases carefully and correctly
 
     int e1=m.toSq==(sq+1) && abs(m.piece)==WHITEPAWN && (color*p->board[sq+1])<0 && abs(m.fromSq-m.toSq)==20;
     int e2=m.toSq==(sq-1) && abs(m.piece)==WHITEPAWN && (color*p->board[sq-1])<0 && abs(m.fromSq-m.toSq)==20;
@@ -496,7 +496,7 @@ void pawnMoves(Position* p,int sq,moveList* moves)
         moves->count++;
     }
 
-    /*now we need promotion*/
+    /*now we need to fix castling bugs*/
 }
 
 uint64_t bitMoves(Position* p,int sq,int dir,int color,uint64_t moves)
