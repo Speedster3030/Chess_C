@@ -17,23 +17,18 @@ int sameMove(Move a,Move b)
 
 int perft(Position* p, int depth)
 {
-    if(depth==0)
+    if(depth==1)
     {
-        //displayBits(p->attackMap);
         if(inCheck(p))
         {
-            //display(&p->board[0]);
             checks++;
         }
-        /*if(p->movesMade[p->moveCount-1].capture==ENPASS)
-        {
-            display(&p->board[0]);
-        }*/
 
-        /*moveList moves;
-        getMoves(p,&moves);*/
-        return 1;//moves.count;
+        moveList moves;
+        getMoves(p,&moves);
+        return moves.count;
     }
+
     moveList moves;
     getMoves(p,&moves);
     int i,nodes=0;
@@ -41,19 +36,9 @@ int perft(Position* p, int depth)
 
     for(i=0;i<c;i++)
     {
-        /*if(moves.list[i].capture==ENPASS)
-        {
-            display(&p->board[0]);
-        }*/
         makeMove(p,&moves.list[i]);
         nodes+=perft(p,depth-1);
         unmakeMove(p);
-
-    }
-
-    if(c==0)
-    {
-        mates++;
     }
 
     return nodes;
@@ -62,12 +47,13 @@ int perft(Position* p, int depth)
 int main()
 {
     clock_t start = clock();
-    Position* p= new_Position();
+    //Position* p= new_Position();
+    Position* p= readFen("r3k2r/8/3Q4/8/8/5q2/8/R3K2R b KQkq ");
     //p->turn=0;
-    //display(p);
+    display(&p->board[0]);
     int i;
 
-    for(i=1;i<6;i++)
+    for(i=1;i<=4;i++)
     {
         int depth=i;
         checks=0; mates=0;
