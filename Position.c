@@ -715,12 +715,12 @@ Position* readFen(char* fen)
     return p;
 }
 
-void display(int8_t *p)
+void display(Position* p)
 {
     int i;
     for(i=0;i<SQUARES;i++)
     {
-        switch(p[i])
+        switch(p->board[i])
         {
             case EDGE:       break;
             case EMPTY:      printf(". "); break;

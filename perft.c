@@ -4,7 +4,6 @@
 #include <time.h>
 
 int checks=0;
-int mates=0;
 
 int sameMove(Move a,Move b)
 {
@@ -48,19 +47,17 @@ int main()
 {
     clock_t start = clock();
     //Position* p= new_Position();
-    Position* p= readFen("r3k2r/8/3Q4/8/8/5q2/8/R3K2R b KQkq ");
-    //p->turn=0;
-    display(&p->board[0]);
+    Position* p= readFen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ");
+    display(p);
     int i;
 
     for(i=1;i<=4;i++)
     {
         int depth=i;
-        checks=0; mates=0;
+        checks=0;
 
         printf("%d positions found at depth %d, ",perft(p,depth),depth);
         printf("%d checks found\n",checks);
-        printf("%d checkmates\n",mates);
         clock_t end = clock();
         double ms = (double)(end - start) * 1000.0 / CLOCKS_PER_SEC;
         printf("%f ms taken\n", ms);

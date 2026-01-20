@@ -119,7 +119,7 @@ void dummyMoves(Position *p,int s,moveList* moves);
 void pawnMoves(Position* p,int s,moveList* moves);
 uint64_t pawnAttacks(Position* p,int c);
 void kingMoves(Position *p,int s,moveList* moves);
-void display(int8_t *p);
+void display(Position* p);
 Position* new_Position();
 Position* readFen(char* s);
 uint64_t generateAttackMap(Position* p);
