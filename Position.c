@@ -76,8 +76,6 @@ void getMoves(Position* p,moveList* moves)
     }
 }
 
-/*How to make the makeMove function more efficinent?
-  how to make it more fast?*/
 void makeMove(Position *p,Move *m)
 {
     uint64_t* pieces=p->turn?&p->whitePieces:&p->blackPieces;
@@ -161,7 +159,6 @@ void makeMove(Position *p,Move *m)
     }
 
     int f=BIT_SQ(m->fromSq), t=BIT_SQ(m->toSq);
-    //macro value directly in expressions gives errors
 
     *pieces &= ~(1ULL << (63-f));
     *pieces |= (1ULL << (63-t));
@@ -246,10 +243,7 @@ void unmakeMove(Position *p)
     p->moveCount--;
     p->turn=!p->turn;
 }
-/* 21 Dec 2025; how do we go about detecting pinned pieces? we can try making each 
-move and checking if our king is in check, that is the most intuitive way, but
-it will cost time and performance,,, is there a way to detect pins without actually
-moving pieces?? a method that saves time?? Bitboard manipulation, etc? */
+
 void knightMoves(Position *p,int sq,int attack,moveList* moves)
 {
     int i,color=p->board[sq]>0?1:-1;
@@ -482,7 +476,7 @@ void pawnMoves(Position* p,int sq,moveList* moves)
             }
         }
         return;
-    }//have to handle cases carefully and correctly
+    }//promotion
 
     int e1=m.toSq==(sq+1) && abs(m.piece)==WHITEPAWN && (color*p->board[sq+1])<0 && abs(m.fromSq-m.toSq)==20;
     int e2=m.toSq==(sq-1) && abs(m.piece)==WHITEPAWN && (color*p->board[sq-1])<0 && abs(m.fromSq-m.toSq)==20;
@@ -495,8 +489,6 @@ void pawnMoves(Position* p,int sq,moveList* moves)
         moves->list[moves->count].capture=ENPASS;
         moves->count++;
     }
-
-    /*now we need to fix castling bugs*/
 }
 
 uint64_t bitMoves(Position* p,int sq,int dir,int color,uint64_t moves)
@@ -757,9 +749,8 @@ void display(int8_t *p)
 Position* new_Position()
 {
         Position *p=malloc(sizeof(Position));
-        p->moveCount=0;p->flags=0b00001111;
-        //p->moves.count=0;
-        //p->attackMoves.count=0;
+        p->moveCount=0;
+        p->flags=0b00001111;
         setEdges(p);
         setBoard(p);
 
