@@ -95,7 +95,7 @@ int main()
 
     while(p->moveCount<MAXGAMEMOVES)
     {
-        if(p->turn)
+        if(!p->turn)
         {
             start= clock();
             val=-1000;
