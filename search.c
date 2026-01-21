@@ -119,7 +119,7 @@ int main()
         }
         else
         {
-            display(&p->board[0]);
+            display(p);
             getMoves(p,&moves);
             if(moves.count==0)
             {
