@@ -45,19 +45,15 @@
 #define BLACKCANCASTLEKINGSIDE (p->flags & 0b0100)
 #define BLACKCANCASTLEQUEENSIDE (p->flags & 0b1000)
 
-#define WKPIECES ((p->whitePieces | p->blackPieces) & 0x6ULL)
-#define WQPIECES ((p->whitePieces | p->blackPieces) & 0x70ULL)
-#define BKPIECES ((p->whitePieces | p->blackPieces) & (0x6ULL << 56))
-#define BQPIECES ((p->whitePieces | p->blackPieces) & (0x70ULL << 56))
+#define WKPIECES (p->board[96]==EMPTY && p->board[97]==EMPTY)
+#define WQPIECES (p->board[94]==EMPTY && p->board[93]==EMPTY && p->board[92]==EMPTY)
+#define BKPIECES (p->board[27]==EMPTY && p->board[26]==EMPTY)
+#define BQPIECES (p->board[24]==EMPTY && p->board[23]==EMPTY && p->board[22]==EMPTY)
 
-#define WHITEKINGCASTLEOK (WKPIECES | (p->attackMap & 0xeULL))
-#define WHITEQUEENCASTLEOK (WQPIECES | (p->attackMap & 0x38ULL))
-#define BLACKKINGCASTLEOK (BKPIECES | (p->attackMap & (0xeULL << 56)))
-#define BLACKQUEENCASTLEOK (BQPIECES | (p->attackMap & (0x38ULL << 56)))
-
-#define RESET "\033[0m"
-#define WHITE "\033[33m"
-#define BROWN "\033[35m"
+#define WHITEKINGCASTLEOK (WKPIECES && (!squAt(p,95,!p->turn) && !squAt(p,96,!p->turn) && !squAt(p,97,!p->turn)))
+#define WHITEQUEENCASTLEOK (WQPIECES && (!squAt(p,95,!p->turn) && !squAt(p,94,!p->turn) && !squAt(p,93,!p->turn)))
+#define BLACKKINGCASTLEOK (BKPIECES && (!squAt(p,25,!p->turn) && !squAt(p,26,!p->turn) && !squAt(p,27,!p->turn)))
+#define BLACKQUEENCASTLEOK (BQPIECES && (!squAt(p,25,!p->turn) && !squAt(p,24,!p->turn) && !squAt(p,23,!p->turn)))
 
 typedef struct
 {
@@ -75,13 +71,14 @@ typedef struct
 
 typedef struct
 {
-    uint64_t attackMap;
     uint64_t whitePieces;
     uint64_t blackPieces;
     uint64_t whitePawns;
     uint64_t blackPawns;
     uint64_t whiteKing;
     uint64_t blackKing;
+    int8_t whiteKingSq;
+    int8_t blackKingSq;
     uint8_t flags;
     int8_t board[SQUARES];
 }gameState;
@@ -97,9 +94,10 @@ typedef struct
     uint64_t blackPieces;
     uint64_t whitePawns;
     uint64_t blackPawns;
-    uint64_t attackMap;
     uint64_t whiteKing;
     uint64_t blackKing;
+    int8_t whiteKingSq;
+    int8_t blackKingSq;
     gameState state[MAXGAMEMOVES];
 }Position;
 
@@ -119,7 +117,8 @@ void dummyMoves(Position *p,int s,moveList* moves);
 void pawnMoves(Position* p,int s,moveList* moves);
 uint64_t pawnAttacks(Position* p,int c);
 void kingMoves(Position *p,int s,moveList* moves);
-void display(Position* p);
+int squAt(Position* p, int sq, int attacker);
+void display(int8_t *p);
 Position* new_Position();
 Position* readFen(char* s);
 uint64_t generateAttackMap(Position* p);

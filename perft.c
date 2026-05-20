@@ -1,9 +1,13 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "Position.h"
 #include <time.h>
 
 int checks=0;
+int mates=0;
+int captures=0;
+int count=0;
 
 int sameMove(Move a,Move b)
 {
@@ -14,20 +18,30 @@ int sameMove(Move a,Move b)
     return 0;
 }
 
+void binary(uint8_t num)
+{
+    int i; printf("0");
+    for(i=3;i>=0;i--)
+    {
+        printf("%d",(num>>i) & 1);
+    }
+    printf("\n");
+}
+
 int perft(Position* p, int depth)
 {
-    if(depth==1)
+    if(depth==0)
     {
-        if(inCheck(p))
+        /*if(inCheck(p))
         {
             checks++;
-        }
-
-        moveList moves;
-        getMoves(p,&moves);
-        return moves.count;
+        }*/
+        /*if(p->movesMade[p->moveCount-1].capture!=EMPTY)
+        {
+            captures++;
+        }*/
+        return 1;//moves.count;
     }
-
     moveList moves;
     getMoves(p,&moves);
     int i,nodes=0;
@@ -46,18 +60,22 @@ int perft(Position* p, int depth)
 int main()
 {
     clock_t start = clock();
-    //Position* p= new_Position();
-    Position* p= readFen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ");
-    display(p);
+    Position* p= new_Position();
+    //Position* p= readFen("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq");
+    //p->turn=0;
+    binary(p->flags);
+    display(&p->board[0]);
     int i;
 
-    for(i=1;i<=4;i++)
+    for(i=1;i<=5;i++)
     {
         int depth=i;
-        checks=0;
+        checks=0; mates=0; captures=0;
 
-        printf("%d positions found at depth %d, ",perft(p,depth),depth);
-        printf("%d checks found\n",checks);
+        printf("%d positions at depth %d, ",perft(p,depth),depth);
+        /*printf("%d checks found, ",checks);
+        printf("%d checkmates ",mates);
+        printf("%d captures\n", captures);*/
         clock_t end = clock();
         double ms = (double)(end - start) * 1000.0 / CLOCKS_PER_SEC;
         printf("%f ms taken\n", ms);
@@ -65,3 +83,4 @@ int main()
 
     return 0;
 }
+

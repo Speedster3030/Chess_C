@@ -5,12 +5,6 @@
 
 #include "Position.h"
 
-int inCheck(Position* p)
-{
-    uint64_t king=p->turn?p->whiteKing:p->blackKing;
-    return (king & p->attackMap)>0?1:0;
-}
-
 void getMoves(Position* p,moveList* moves)
 {
     uint64_t pieces=p->turn?p->whitePieces:p->blackPieces;
@@ -53,6 +47,7 @@ void getMoves(Position* p,moveList* moves)
     }
 
     //now account for checks and pins;
+
     for(i=0;i<allMoves.count;i++)
     {
         if(allMoves.list[i].capture>ENPASS)
@@ -60,14 +55,10 @@ void getMoves(Position* p,moveList* moves)
             goto label;
         }
         makeMove(p,&allMoves.list[i]);
-        uint64_t king=!(p->turn)?p->whiteKing:p->blackKing;
-        p->turn=!p->turn;
-        uint64_t map=generateAttackMap(p);
-        p->turn=!p->turn;/*These steps are necessary
-        otherwise we had no way of checking if the
-        side that just made the move is now in check*/
+        int8_t king=p->turn?p->blackKingSq:p->whiteKingSq;
+        int kingAttacked= squAt(p,king,p->turn);
         unmakeMove(p);
-        if((king & map)==0)
+        if(!kingAttacked)
         {
             label:
             moves->list[moves->count]=allMoves.list[i];
@@ -85,9 +76,10 @@ void makeMove(Position *p,Move *m)
     p->state[p->moveCount].blackPawns=p->blackPawns;
     p->state[p->moveCount].whitePieces=p->whitePieces;
     p->state[p->moveCount].blackPieces=p->blackPieces;
-    p->state[p->moveCount].attackMap=p->attackMap;
     p->state[p->moveCount].whiteKing=p->whiteKing;
     p->state[p->moveCount].blackKing=p->blackKing;
+    p->state[p->moveCount].whiteKingSq=p->whiteKingSq;
+    p->state[p->moveCount].blackKingSq=p->blackKingSq;
     p->state[p->moveCount].flags=p->flags;
     memcpy(&p->state[p->moveCount].board[0],&p->board[0],SQUARES*sizeof(int8_t));
 
@@ -134,6 +126,8 @@ void makeMove(Position *p,Move *m)
     if(m->capture > ENPASS)
     {
         uint64_t* king=p->turn?&p->whiteKing:&p->blackKing;
+        int8_t* kingSq=p->turn?&p->whiteKingSq:&p->blackKingSq;
+        *kingSq=m->toSq;
         int kt=BIT_SQ(m->toSq),kf=BIT_SQ(m->fromSq);
         *pieces &= ~(1ULL << (63-kf)); *pieces |= 1ULL << (63-kt);
         *king &= ~(1ULL << (63-kf));  *king |= 1ULL << (63-kt);
@@ -159,6 +153,7 @@ void makeMove(Position *p,Move *m)
     }
 
     int f=BIT_SQ(m->fromSq), t=BIT_SQ(m->toSq);
+    //macro value directly in expressions gives errors
 
     *pieces &= ~(1ULL << (63-f));
     *pieces |= (1ULL << (63-t));
@@ -189,11 +184,13 @@ void makeMove(Position *p,Move *m)
     {
         p->whiteKing &= ~(1ULL << (63-f));
         p->whiteKing |= 1ULL << (63-t);
+        p->whiteKingSq=m->toSq;
     }
     if(m->piece==BLACKKING)
     {
         p->blackKing &=~(1ULL << (63-f));
         p->blackKing |= 1ULL << (63-t);
+        p->blackKingSq=m->toSq;
     }
 
     p->board[m->toSq]=p->board[m->fromSq];
@@ -219,7 +216,6 @@ void makeMove(Position *p,Move *m)
     p->movesMade[p->moveCount]=*m;
     p->moveCount++;
     p->turn=!p->turn;
-    p->attackMap=generateAttackMap(p);
 }
 
 void unmakeMove(Position *p)
@@ -234,15 +230,17 @@ void unmakeMove(Position *p)
     p->blackPawns=p->state[p->moveCount-1].blackPawns;
     p->whitePieces=p->state[p->moveCount-1].whitePieces;
     p->blackPieces=p->state[p->moveCount-1].blackPieces;
-    p->attackMap=p->state[p->moveCount-1].attackMap;
     p->whiteKing=p->state[p->moveCount-1].whiteKing;
     p->blackKing=p->state[p->moveCount-1].blackKing;
+    p->whiteKingSq=p->state[p->moveCount-1].whiteKingSq;
+    p->blackKingSq=p->state[p->moveCount-1].blackKingSq;
     p->flags=p->state[p->moveCount-1].flags;
     memcpy(&p->board[0],&p->state[p->moveCount-1].board[0],SQUARES*sizeof(int8_t));
 
     p->moveCount--;
     p->turn=!p->turn;
 }
+
 
 void knightMoves(Position *p,int sq,int attack,moveList* moves)
 {
@@ -476,7 +474,7 @@ void pawnMoves(Position* p,int sq,moveList* moves)
             }
         }
         return;
-    }//promotion
+    }//have to handle cases carefully and correctly
 
     int e1=m.toSq==(sq+1) && abs(m.piece)==WHITEPAWN && (color*p->board[sq+1])<0 && abs(m.fromSq-m.toSq)==20;
     int e2=m.toSq==(sq-1) && abs(m.piece)==WHITEPAWN && (color*p->board[sq-1])<0 && abs(m.fromSq-m.toSq)==20;
@@ -489,93 +487,7 @@ void pawnMoves(Position* p,int sq,moveList* moves)
         moves->list[moves->count].capture=ENPASS;
         moves->count++;
     }
-}
 
-uint64_t bitMoves(Position* p,int sq,int dir,int color,uint64_t moves)
-{
-    int bit=BIT_SQ(sq);
-    uint64_t friends=color==1?p->whitePieces:p->blackPieces;
-    if(p->board[sq]==EDGE)
-    {
-        return moves;
-    }
-    uint64_t enemies=color==1?p->blackPieces:p->whitePieces;
-    moves |=(1ULL<<(63-bit));
-    if(p->board[sq]!=EMPTY)
-    {
-        return moves;
-    }
-    return bitMoves(p,sq+dir,dir,color,moves);
-}
-
-uint64_t generateAttackMap(Position* p)
-{
-    uint64_t pieces=(p->turn==1)?p->blackPieces:p->whitePieces;
-    p->attackMap=0;
-    moveList attackMoves;
-    attackMoves.count=0;
-    int i;
-    int color=p->turn==1?-1:1;
-    uint64_t map=0ULL;
-
-    while(pieces)
-    {
-        uint64_t lowest= pieces & -pieces;
-        int bit=0;
-        uint64_t temp= lowest;
-        while(temp <<= 1) bit++;
-
-        int sq=BOARD_SQ(bit);
-        int piece=p->board[sq];
-        uint64_t moves=0ULL;
-
-        switch(abs(piece))
-        {
-            case WHITEBISHOP:
-                moves |=bitMoves(p,sq-11,-11,color,0ULL);
-                moves |=bitMoves(p,sq-9,-9,color,0ULL);
-                moves |=bitMoves(p,sq+9,9,color,0ULL);
-                moves |=bitMoves(p,sq+11,11,color,0ULL);
-                break;
-            case WHITEKNIGHT:
-                knightMoves(p,sq,1,&attackMoves);
-                break;
-            case WHITEROOK:
-                moves |=bitMoves(p,sq-10,-10,color,0ULL);
-                moves |=bitMoves(p,sq-1,-1,color,0ULL);
-                moves |=bitMoves(p,sq+1,1,color,0ULL);
-                moves |=bitMoves(p,sq+10,10,color,0ULL);
-                break;
-            case WHITEQUEEN:
-                moves |=bitMoves(p,sq-11,-11,color,0ULL);
-                moves |=bitMoves(p,sq-9,-9,color,0ULL);
-                moves |=bitMoves(p,sq+9,9,color,0ULL);
-                moves |=bitMoves(p,sq+11,11,color,0ULL);
-                moves |=bitMoves(p,sq-10,-10,color,0ULL);
-                moves |=bitMoves(p,sq-1,-1,color,0ULL);
-                moves |=bitMoves(p,sq+1,1,color,0ULL);
-                moves |=bitMoves(p,sq+10,10,color,0ULL);
-                break;
-            case WHITEKING:
-                dummyMoves(p,sq,&attackMoves);
-                break;
-            default:
-                break;
-        }
-
-        pieces^=lowest;
-        map |=moves;
-    }
-
-    for(i=0;i<attackMoves.count;i++)
-    {
-        int sq=attackMoves.list[i].toSq;
-        int bitSq=BIT_SQ(sq);
-        map |=(1ULL << (63-bitSq));
-    }
-    map |=pawnAttacks(p,!p->turn);
-
-    return map;
 }
 
 void kingMoves(Position* p,int sq,moveList* moves)
@@ -589,7 +501,7 @@ void kingMoves(Position* p,int sq,moveList* moves)
         int bit=BIT_SQ(s);
         int flag=(p->board[s]!=EDGE && p->board[sq]*p->board[s]<=0)?1:0;
 
-        if(flag && !(p->attackMap & (1ULL << (63-bit))))
+        if(flag && !squAt(p,s,!p->turn))
         {
             moves->list[moves->count].fromSq=sq;
             moves->list[moves->count].toSq=s;
@@ -599,7 +511,7 @@ void kingMoves(Position* p,int sq,moveList* moves)
         }
     }
 
-    if(p->turn && WHITECANCASTLEKINGSIDE && WHITEKINGCASTLEOK==0)
+    if(p->turn && WHITECANCASTLEKINGSIDE && WHITEKINGCASTLEOK)
     {
         moves->list[moves->count].fromSq=sq;
         moves->list[moves->count].toSq=sq+2;
@@ -607,7 +519,7 @@ void kingMoves(Position* p,int sq,moveList* moves)
         moves->list[moves->count].capture=KINGSIDECASTLE;
         moves->count++;
     }
-    if(p->turn && WHITECANCASTLEQUEENSIDE && WHITEQUEENCASTLEOK==0)
+    if(p->turn && WHITECANCASTLEQUEENSIDE && WHITEQUEENCASTLEOK)
     {
         moves->list[moves->count].fromSq=sq;
         moves->list[moves->count].toSq=sq-2;
@@ -615,7 +527,7 @@ void kingMoves(Position* p,int sq,moveList* moves)
         moves->list[moves->count].capture=QUEENSIDECASTLE;
         moves->count++;
     }
-    if(!p->turn && BLACKCANCASTLEKINGSIDE && BLACKKINGCASTLEOK==0)
+    if(!p->turn && BLACKCANCASTLEKINGSIDE && BLACKKINGCASTLEOK)
     {
         moves->list[moves->count].fromSq=sq;
         moves->list[moves->count].toSq=sq+2;
@@ -623,7 +535,7 @@ void kingMoves(Position* p,int sq,moveList* moves)
         moves->list[moves->count].capture=KINGSIDECASTLE;
         moves->count++;
     }
-    if(!p->turn && BLACKCANCASTLEQUEENSIDE && BLACKQUEENCASTLEOK==0)
+    if(!p->turn && BLACKCANCASTLEQUEENSIDE && BLACKQUEENCASTLEOK)
     {
         moves->list[moves->count].fromSq=sq;
         moves->list[moves->count].toSq=sq-2;
@@ -631,6 +543,117 @@ void kingMoves(Position* p,int sq,moveList* moves)
         moves->list[moves->count].capture=QUEENSIDECASTLE;
         moves->count++;
     }
+}
+
+int squAt(Position* p, int sq, int attacker)
+{
+    /* attacker is the color of the attacking side,
+    1 for white and -1 for black */
+
+    attacker=(attacker==1)?1:-1;
+
+    int knight=(attacker>0)?WHITEKNIGHT:BLACKKNIGHT;
+    int queen=(attacker>0)?WHITEQUEEN:BLACKQUEEN;
+    int rook=(attacker>0)?WHITEROOK:BLACKROOK;
+    int bishop=(attacker>0)?WHITEBISHOP:BLACKBISHOP;
+    int pawn=(attacker>0)?WHITEPAWN:BLACKPAWN;
+    int king=(attacker>0)?WHITEKING:BLACKKING;
+
+    //check for knight:
+
+    int knDir[MAXKNIGHTMOVES]={-21,-19,-12,-8,8,12,19,21};
+    int i;
+    for(i=0;i<MAXKNIGHTMOVES;i++)
+    {
+        int s=sq+knDir[i];
+        if(p->board[s]!=EDGE && p->board[s]==knight)
+        {
+            return 1;
+        }
+    }
+
+    //check for bishop and diagonal Queen:
+
+    int bDir[4]={-11,-9,9,11};
+    for(i=0;i<4;i++)
+    {
+        int s=sq;
+        while(1)
+        {
+            s+=bDir[i];
+            int block=p->board[s]*attacker;
+            if(p->board[s]==EDGE || block<0)
+            {
+                break;
+            }
+            if(block>0)
+            {
+                if(p->board[s]==bishop || p->board[s]==queen)
+                {
+                    return 1;
+                }
+                break;
+            }
+        }
+    }
+
+    //check for rook and straight queen:
+
+    int rDir[4]={-10,-1,1,10};
+    for(i=0;i<4;i++)
+    {
+        int s=sq;
+        while(1)
+        {
+            s+=rDir[i];
+            int block=p->board[s]*attacker;
+            if(p->board[s]==EDGE || block<0)
+            {
+                break;
+            }
+            if(block>0)
+            {
+                if(p->board[s]==rook || p->board[s]==queen)
+                {
+                    return 1;
+                }
+                break;
+            }
+        }
+    }
+
+    //check for king:
+
+    int kDir[8]={-11,-10,-9,-1,1,9,10,11};
+    for(i=0;i<8;i++)
+    {
+        int s=sq+kDir[i];
+        if(p->board[s]!=EDGE && p->board[s]==king)
+        {
+            return 1;
+        }
+    }
+
+    //check for pawn:
+
+    int pDir[2]={9,11};
+    if(attacker<0)
+    {
+        pDir[0]*=-1;
+        pDir[1]*=-1;
+    }
+    for(i=0;i<2;i++)
+    {
+        int s=sq+pDir[i];
+        if(p->board[s]!=EDGE && p->board[s]==pawn)
+        {
+            return 1;
+        }
+    }
+
+    //square not attacked by any enemy pieces:
+
+    return 0;
 }
 
 Position* readFen(char* fen)
@@ -668,7 +691,9 @@ Position* readFen(char* fen)
                 p->board[s]=-9; sq++; break;
             case 'k':
                 p->blackKing |= 1ULL << (63-sq);
-                p->board[s]=-10; sq++; break;
+                p->board[s]=-10;
+                p->blackKingSq=s;
+                sq++; break;
             case 'P':
                 p->board[s]=1;
                 p->whitePawns |= 1ULL << (63-sq);
@@ -683,6 +708,7 @@ Position* readFen(char* fen)
                 p->board[s]=9; sq++; break;
             case 'K':
                 p->board[s]=10;
+                p->whiteKingSq=s;
                 p->whiteKing |= 1ULL << (63-sq);
                 sq++; break;
             case '/':
@@ -711,31 +737,30 @@ Position* readFen(char* fen)
         }
         i++;
     }
-    p->attackMap=generateAttackMap(p);
     return p;
 }
 
-void display(Position* p)
+void display(int8_t *p)
 {
     int i;
     for(i=0;i<SQUARES;i++)
     {
-        switch(p->board[i])
+        switch(p[i])
         {
             case EDGE:       break;
             case EMPTY:      printf(". "); break;
-            case WHITEPAWN:  printf(WHITE "♟ " RESET); break;
-            case BLACKPAWN:  printf(BROWN "♟ " RESET); break;
-            case WHITEKNIGHT:printf(WHITE "♞ " RESET); break;
-            case BLACKKNIGHT:printf(BROWN "♞ " RESET); break;
-            case WHITEBISHOP:printf(WHITE "♝ " RESET); break;
-            case BLACKBISHOP:printf(BROWN "♝ " RESET); break;
-            case WHITEROOK:  printf(WHITE "♜ " RESET); break;
-            case BLACKROOK:  printf(BROWN "♜ " RESET); break;
-            case WHITEQUEEN: printf(WHITE "♛ " RESET); break;
-            case BLACKQUEEN: printf(BROWN "♛ " RESET); break;
-            case WHITEKING:  printf(WHITE "♚ " RESET); break;
-            case BLACKKING:  printf(BROWN "♚ " RESET); break;
+            case WHITEPAWN:  printf("♙ "); break;
+            case BLACKPAWN:  printf("♟ "); break;
+            case WHITEKNIGHT:printf("♘ "); break;
+            case BLACKKNIGHT:printf("♞ "); break;
+            case WHITEBISHOP:printf("♗ "); break;
+            case BLACKBISHOP:printf("♝ "); break;
+            case WHITEROOK:  printf("♖ "); break;
+            case BLACKROOK:  printf("♜ "); break;
+            case WHITEQUEEN: printf("♕ "); break;
+            case BLACKQUEEN: printf("♛ "); break;
+            case WHITEKING:  printf("♔ "); break;
+            case BLACKKING:  printf("♚ "); break;
             case MOVE:       printf("* "); break;
         }
         if((i+1)%10==0)
@@ -749,8 +774,7 @@ void display(Position* p)
 Position* new_Position()
 {
         Position *p=malloc(sizeof(Position));
-        p->moveCount=0;
-        p->flags=0b00001111;
+        p->moveCount=0;p->flags=0b00001111;
         setEdges(p);
         setBoard(p);
 
@@ -825,9 +849,9 @@ void setBoard(Position *p)
     p->whitePawns= 0x000000000000ff00;
     p->blackPawns= 0x00ff000000000000;
     p->whiteKing=  1ULL << 3;
+    p->whiteKingSq=95;
     p->blackKing=  1ULL << (63-4);
+    p->blackKingSq=25;
     p->turn=1;
-    p->attackMap=generateAttackMap(p);
 }
 
-//checking
