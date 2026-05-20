@@ -102,7 +102,6 @@ typedef struct
 }Position;
 
 int inCheck(Position* p);
-uint64_t bitMoves(Position* p,int s,int d,int c,uint64_t m);
 void setEdges(Position *p);
 void setBoard(Position *p);
 void getMoves(Position* p,moveList* moves);
@@ -121,7 +120,6 @@ int squAt(Position* p, int sq, int attacker);
 void display(int8_t *p);
 Position* new_Position();
 Position* readFen(char* s);
-uint64_t generateAttackMap(Position* p);
 void displayBits(uint64_t b);
 
 
