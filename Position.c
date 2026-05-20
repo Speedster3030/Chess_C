@@ -830,3 +830,4 @@ void setBoard(Position *p)
     p->attackMap=generateAttackMap(p);
 }
 
+//checking
