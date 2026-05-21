@@ -72,8 +72,6 @@ void makeMove(Position *p,Move *m)
     uint64_t* pieces=p->turn?&p->whitePieces:&p->blackPieces;
     uint64_t* oppPieces=p->turn?&p->blackPieces:&p->whitePieces;
 
-    p->state[p->moveCount].whitePawns=p->whitePawns;
-    p->state[p->moveCount].blackPawns=p->blackPawns;
     p->state[p->moveCount].whitePieces=p->whitePieces;
     p->state[p->moveCount].blackPieces=p->blackPieces;
     p->state[p->moveCount].whiteKing=p->whiteKing;
@@ -91,8 +89,6 @@ void makeMove(Position *p,Move *m)
         *pieces &= ~(1ULL << (63-f));
         *pieces |=1ULL << (63-t);
         *oppPieces &=~(1ULL << (63-t));
-        uint64_t* pawns=p->turn?&p->whitePawns:&p->blackPawns;
-        *pawns &=~(1ULL << (63-f));
         goto label;
     }
 
@@ -106,19 +102,6 @@ void makeMove(Position *p,Move *m)
 
         *pieces &=~(1ULL << (63-f)); *pieces |=1ULL <<(63-t);
         *oppPieces &=~(1ULL << (63-f0));
-
-        if(m->piece==WHITEPAWN)
-        {
-            p->whitePawns &= ~(1ULL << (63-f));
-            p->whitePawns |= 1ULL << (63-t);
-            p->blackPawns &= ~(1ULL << (63-f0));
-        }
-        if(m->piece==BLACKPAWN)
-        {
-            p->blackPawns &= ~(1ULL << (63-f));
-            p->blackPawns |= 1ULL << (63-t);
-            p->whitePawns &= ~(1ULL << (63-f0));
-        }
 
         goto label;
     }
@@ -162,24 +145,6 @@ void makeMove(Position *p,Move *m)
         *oppPieces &= ~(1ULL << (63-t));
     }
 
-    if(m->piece==WHITEPAWN)
-    {
-        p->whitePawns &= ~(1ULL << (63-f));
-        p->whitePawns |= 1ULL << (63-t);
-    }
-    if(m->capture==BLACKPAWN)
-    {
-        p->blackPawns &= ~(1ULL << (63-t));
-    }
-    if(m->piece==BLACKPAWN)
-    {
-        p->blackPawns &= ~(1ULL << (63-f));
-        p->blackPawns |= 1ULL << (63-t);
-    }
-    if(m->capture==WHITEPAWN)
-    {
-        p->whitePawns &= ~(1ULL << (63-t));
-    }
     if(m->piece==WHITEKING)
     {
         p->whiteKing &= ~(1ULL << (63-f));
@@ -226,8 +191,6 @@ void unmakeMove(Position *p)
         return;
     }
 
-    p->whitePawns=p->state[p->moveCount-1].whitePawns;
-    p->blackPawns=p->state[p->moveCount-1].blackPawns;
     p->whitePieces=p->state[p->moveCount-1].whitePieces;
     p->blackPieces=p->state[p->moveCount-1].blackPieces;
     p->whiteKing=p->state[p->moveCount-1].whiteKing;
@@ -371,38 +334,6 @@ void dummyMoves(Position *p,int sq,moveList* moves)
             (*c)++;j++;
         }
     }
-}
-
-uint64_t pawnAttacks(Position* p,int color)
-{
-    uint64_t d=0;
-    uint64_t pawns=color?p->whitePawns:p->blackPawns;
-    int i=color?-1:1;
-
-    while(pawns)
-    {
-        uint64_t lowest= pawns & -pawns;
-        int bit=0;
-        uint64_t temp= lowest;
-        while(temp <<=1) bit++;
-
-        int sq=BOARD_SQ(bit);
-        int l=sq+(i*9),r=sq+(i*11);
-        if(p->board[l]!=EDGE)
-        {
-            int bitL=BIT_SQ(l);
-            d |= 1ULL<<(63-bitL);
-        }
-        if(p->board[r]!=EDGE)
-        {
-            int bitR=BIT_SQ(r);
-            d |= 1ULL<<(63-bitR);
-        }
-
-        pawns^=lowest;
-    }
-
-    return d;
 }
 
 void pawnMoves(Position* p,int sq,moveList* moves)
@@ -679,7 +610,6 @@ Position* readFen(char* fen)
         {
             case 'p':
                 p->board[s]=-1;
-                p->blackPawns |= 1ULL << (63-sq);
                 sq++; break;
             case 'r':
                 p->board[s]=-5; sq++; break;
@@ -696,7 +626,6 @@ Position* readFen(char* fen)
                 sq++; break;
             case 'P':
                 p->board[s]=1;
-                p->whitePawns |= 1ULL << (63-sq);
                 sq++; break;
             case 'R':
                 p->board[s]=5; sq++; break;
@@ -846,8 +775,6 @@ void setBoard(Position *p)
     }
     p->whitePieces=0x000000000000ffff;
     p->blackPieces=0xffff000000000000;
-    p->whitePawns= 0x000000000000ff00;
-    p->blackPawns= 0x00ff000000000000;
     p->whiteKing=  1ULL << 3;
     p->whiteKingSq=95;
     p->blackKing=  1ULL << (63-4);

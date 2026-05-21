@@ -73,8 +73,6 @@ typedef struct
 {
     uint64_t whitePieces;
     uint64_t blackPieces;
-    uint64_t whitePawns;
-    uint64_t blackPawns;
     uint64_t whiteKing;
     uint64_t blackKing;
     int8_t whiteKingSq;
@@ -92,8 +90,6 @@ typedef struct
     uint8_t flags;
     uint64_t whitePieces;
     uint64_t blackPieces;
-    uint64_t whitePawns;
-    uint64_t blackPawns;
     uint64_t whiteKing;
     uint64_t blackKing;
     int8_t whiteKingSq;
@@ -113,8 +109,7 @@ void bishopMoves(Position *p,int s,moveList* moves);
 void rookMoves(Position *p,int s,moveList* moves);
 void queenMoves(Position *p,int s,moveList* moves);
 void dummyMoves(Position *p,int s,moveList* moves);
-void pawnMoves(Position* p,int s,moveList* moves);
-uint64_t pawnAttacks(Position* p,int c);
+void pawnMoves(Position* p, int s,moveList* moves);
 void kingMoves(Position *p,int s,moveList* moves);
 int squAt(Position* p, int sq, int attacker);
 void display(int8_t *p);
