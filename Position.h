@@ -73,8 +73,6 @@ typedef struct
 {
     uint64_t whitePieces;
     uint64_t blackPieces;
-    uint64_t whiteKing;
-    uint64_t blackKing;
     int8_t whiteKingSq;
     int8_t blackKingSq;
     uint8_t flags;
@@ -90,8 +88,6 @@ typedef struct
     uint8_t flags;
     uint64_t whitePieces;
     uint64_t blackPieces;
-    uint64_t whiteKing;
-    uint64_t blackKing;
     int8_t whiteKingSq;
     int8_t blackKingSq;
     gameState state[MAXGAMEMOVES];

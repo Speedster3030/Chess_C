@@ -74,8 +74,6 @@ void makeMove(Position *p,Move *m)
 
     p->state[p->moveCount].whitePieces=p->whitePieces;
     p->state[p->moveCount].blackPieces=p->blackPieces;
-    p->state[p->moveCount].whiteKing=p->whiteKing;
-    p->state[p->moveCount].blackKing=p->blackKing;
     p->state[p->moveCount].whiteKingSq=p->whiteKingSq;
     p->state[p->moveCount].blackKingSq=p->blackKingSq;
     p->state[p->moveCount].flags=p->flags;
@@ -108,12 +106,10 @@ void makeMove(Position *p,Move *m)
 
     if(m->capture > ENPASS)
     {
-        uint64_t* king=p->turn?&p->whiteKing:&p->blackKing;
         int8_t* kingSq=p->turn?&p->whiteKingSq:&p->blackKingSq;
         *kingSq=m->toSq;
         int kt=BIT_SQ(m->toSq),kf=BIT_SQ(m->fromSq);
         *pieces &= ~(1ULL << (63-kf)); *pieces |= 1ULL << (63-kt);
-        *king &= ~(1ULL << (63-kf));  *king |= 1ULL << (63-kt);
         p->board[m->toSq]=m->piece;   p->board[m->fromSq]=EMPTY;
 
         if(m->capture==KINGSIDECASTLE)
@@ -147,14 +143,10 @@ void makeMove(Position *p,Move *m)
 
     if(m->piece==WHITEKING)
     {
-        p->whiteKing &= ~(1ULL << (63-f));
-        p->whiteKing |= 1ULL << (63-t);
         p->whiteKingSq=m->toSq;
     }
     if(m->piece==BLACKKING)
     {
-        p->blackKing &=~(1ULL << (63-f));
-        p->blackKing |= 1ULL << (63-t);
         p->blackKingSq=m->toSq;
     }
 
@@ -193,8 +185,6 @@ void unmakeMove(Position *p)
 
     p->whitePieces=p->state[p->moveCount-1].whitePieces;
     p->blackPieces=p->state[p->moveCount-1].blackPieces;
-    p->whiteKing=p->state[p->moveCount-1].whiteKing;
-    p->blackKing=p->state[p->moveCount-1].blackKing;
     p->whiteKingSq=p->state[p->moveCount-1].whiteKingSq;
     p->blackKingSq=p->state[p->moveCount-1].blackKingSq;
     p->flags=p->state[p->moveCount-1].flags;
@@ -620,7 +610,6 @@ Position* readFen(char* fen)
             case 'q':
                 p->board[s]=-9; sq++; break;
             case 'k':
-                p->blackKing |= 1ULL << (63-sq);
                 p->board[s]=-10;
                 p->blackKingSq=s;
                 sq++; break;
@@ -638,7 +627,6 @@ Position* readFen(char* fen)
             case 'K':
                 p->board[s]=10;
                 p->whiteKingSq=s;
-                p->whiteKing |= 1ULL << (63-sq);
                 sq++; break;
             case '/':
                 break;
@@ -775,9 +763,7 @@ void setBoard(Position *p)
     }
     p->whitePieces=0x000000000000ffff;
     p->blackPieces=0xffff000000000000;
-    p->whiteKing=  1ULL << 3;
     p->whiteKingSq=95;
-    p->blackKing=  1ULL << (63-4);
     p->blackKingSq=25;
     p->turn=1;
 }
